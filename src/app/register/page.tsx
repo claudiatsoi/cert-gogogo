@@ -66,6 +66,7 @@ export default function RegisterOrLoginPage() {
         if (authError) throw authError;
 
         if (authData.user) {
+          // Insert into 'profiles' (System Table)
           const { error: profileError } = await supabase
             .from('profiles')
             .insert([
@@ -77,8 +78,25 @@ export default function RegisterOrLoginPage() {
               },
             ]);
 
-            if (profileError) {
-                console.error("Profile creation error:", profileError);
+          if (profileError) {
+              console.error("Profile creation error:", profileError);
+          }
+
+          // Insert into 'Reg info' (User Custom Table)
+          const { error: regError } = await supabase
+            .from('Reg info')
+            .insert([
+              {
+                "Child's Full Name": fullName,
+                "Parent's Email": email, // mapped from email
+                "Parent's Phone number": phone ? Number(phone) : null, // casting to numeric as per schema
+                "Grade": grade,
+                "Password": password, // Warning: Storing plain text password is insecure but follows requested schema
+              },
+            ]);
+            
+            if (regError) {
+              console.error("Reg info insert error (check table columns):", regError);
             }
         }
 
