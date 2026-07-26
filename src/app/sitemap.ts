@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = "https://cicoca.org";
+const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://cicoca.org").replace(/\/+$/, "");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

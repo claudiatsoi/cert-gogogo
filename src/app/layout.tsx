@@ -17,7 +17,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://cicoca.org").replace(/\/+$/, "");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "粵一創科文化協會 | Cant One Creative Innovation & Culture Association",
   description: "為香港學生打造的網上比賽平台 / Low-budget online competition platform for students in Hong Kong",
 };
