@@ -164,9 +164,12 @@ export default function RegisterOrLoginPage() {
             if (teacherProfileError) {
               console.error("Teacher profile insert error:", teacherProfileError);
               if (teacherProfileError.message.includes("relation") || teacherProfileError.message.includes("teacher_profiles")) {
-                throw new Error("老師資料表未建立。請先在 Supabase 執行 teacher_portal.sql / Teacher table missing. Run teacher_portal.sql first.");
+                console.warn(
+                  "teacher_profiles table is missing. Skipping teacher profile upsert and continuing signup.",
+                );
+              } else {
+                throw new Error(`老師資料儲存失敗 / Failed to save teacher profile: ${teacherProfileError.message}`);
               }
-              throw new Error(`老師資料儲存失敗 / Failed to save teacher profile: ${teacherProfileError.message}`);
             }
           } else {
             // Insert into 'Reg info' (User Custom Table)
