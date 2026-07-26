@@ -113,11 +113,14 @@ export default function RegisterOrLoginPage() {
           }
         }
 
+        const signupRedirectTo = `${window.location.origin}/register`;
+
         // Sign Up
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: signupRedirectTo,
             data: {
               full_name: isTeacher ? title : fullName,
               phone: isTeacher ? teacherPhone : phone,
