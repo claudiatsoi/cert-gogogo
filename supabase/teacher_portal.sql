@@ -14,11 +14,15 @@ create table if not exists teacher_students (
   student_email text not null,
   grade text,
   parent_email text,
+  parent_phone text,
   magic_link_sent_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique (teacher_id, student_email)
 );
+
+alter table teacher_students
+  add column if not exists parent_phone text;
 
 create index if not exists idx_teacher_students_teacher_id on teacher_students(teacher_id);
 

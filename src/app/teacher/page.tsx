@@ -16,6 +16,7 @@ type ParsedStudent = {
   student_email: string;
   grade?: string;
   parent_email?: string;
+  parent_phone?: string;
 };
 
 type SendResult = {
@@ -24,7 +25,7 @@ type SendResult = {
   message: string;
 };
 
-const SAMPLE_CSV = `student_name,student_email,grade,parent_email\nChan Tai Man,student1@example.com,P4,parent1@example.com\nLee Siu Ming,student2@example.com,S1,parent2@example.com`;
+const SAMPLE_CSV = `student_name,student_email,grade,parent_email,parent_phone\nChan Tai Man,student1@example.com,P4,parent1@example.com,91234567\nLee Siu Ming,student2@example.com,S1,parent2@example.com,92345678`;
 
 function parseCsvLine(line: string): string[] {
   const out: string[] = [];
@@ -61,6 +62,10 @@ function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isPhone(value: string): boolean {
+  return /^[0-9+()\-\s]{6,20}$/.test(value);
+}
+
 export default function TeacherPortalPage() {
   const router = useRouter();
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -80,7 +85,7 @@ export default function TeacherPortalPage() {
       const user = authData.user;
 
       if (!user) {
-        router.push("/register");
+        router.push("/register?accountType=teacher");
         return;
       }
 
@@ -159,6 +164,7 @@ export default function TeacherPortalPage() {
       const student_email = cols[1]?.trim().toLowerCase();
       const grade = cols[2]?.trim() || undefined;
       const parent_email = cols[3]?.trim().toLowerCase() || undefined;
+      const parent_phone = cols[4]?.trim() || undefined;
 
       if (!student_name) {
         localErrors.push(`Line ${rowNumber}: student_name is required`);
@@ -175,13 +181,18 @@ export default function TeacherPortalPage() {
         continue;
       }
 
+      if (parent_phone && !isPhone(parent_phone)) {
+        localErrors.push(`Line ${rowNumber}: invalid parent_phone (${parent_phone})`);
+        continue;
+      }
+
       if (seen.has(student_email)) {
         localErrors.push(`Line ${rowNumber}: duplicated student_email (${student_email})`);
         continue;
       }
 
       seen.add(student_email);
-      parsed.push({ student_name, student_email, grade, parent_email });
+      parsed.push({ student_name, student_email, grade, parent_email, parent_phone });
     }
 
     setStudents(parsed);
@@ -220,6 +231,7 @@ export default function TeacherPortalPage() {
           student_email: student.student_email,
           grade: student.grade ?? null,
           parent_email: student.parent_email ?? null,
+          parent_phone: student.parent_phone ?? null,
         },
         { onConflict: "teacher_id,student_email" },
       );
@@ -315,7 +327,7 @@ export default function TeacherPortalPage() {
         <CardHeader>
           <CardTitle>批量上傳 / Bulk Upload</CardTitle>
           <CardDescription>
-            CSV columns: student_name, student_email, grade, parent_email
+            CSV columns: student_name, student_email, grade, parent_email, parent_phone
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -340,7 +352,10 @@ export default function TeacherPortalPage() {
               <div className="max-h-48 overflow-auto text-sm space-y-1">
                 {students.map((student) => (
                   <div key={student.student_email} className="flex items-center justify-between gap-4">
-                    <span>{student.student_name}</span>
+                    <span>
+                      {student.student_name}
+                      {student.parent_phone ? ` (${student.parent_phone})` : ""}
+                    </span>
                     <span className="text-muted-foreground">{student.student_email}</span>
                   </div>
                 ))}
@@ -391,6 +406,7 @@ export default function TeacherPortalPage() {
                   <div>
                     <p className="font-medium">{row.student_name}</p>
                     <p className="text-muted-foreground">{row.student_email}</p>
+                    {row.parent_phone ? <p className="text-muted-foreground">Tel: {row.parent_phone}</p> : null}
                   </div>
                   <div className="text-muted-foreground text-xs sm:text-sm">
                     {row.magic_link_sent_at

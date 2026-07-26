@@ -41,7 +41,7 @@ export function Footer() {
 
           <div>
             <h4 className="font-semibold mb-4 text-accent">聯絡我們 / Contact</h4>
-            <p className="text-primary-foreground/80">電郵 / Support: help@claunode.com</p>
+            <p className="text-primary-foreground/80">電郵 / Support: support@cocica.org</p>
           </div>
         </div>
         

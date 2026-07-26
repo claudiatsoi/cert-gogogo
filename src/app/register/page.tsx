@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,6 +49,13 @@ export default function RegisterOrLoginPage() {
 
   const isTeacher = accountType === "teacher";
 
+  useEffect(() => {
+    const requestedType = new URLSearchParams(window.location.search).get("accountType");
+    if (requestedType === "teacher" || requestedType === "student") {
+      setAccountType(requestedType);
+    }
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -73,6 +80,12 @@ export default function RegisterOrLoginPage() {
     } = formData;
 
     try {
+      if (!isSupabaseConfigured) {
+        throw new Error(
+          "Supabase 未設定。請在 .env.local 填入 NEXT_PUBLIC_SUPABASE_URL 與 NEXT_PUBLIC_SUPABASE_ANON_KEY。 / Supabase is not configured.",
+        );
+      }
+
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -204,9 +217,12 @@ export default function RegisterOrLoginPage() {
       }
     } catch (err: any) {
       // Basic translation for common errors
-      let msg = err.message;
+      let msg = err?.message || "發生錯誤 / An error occurred";
       if (msg.includes("Invalid login")) msg = "登入失敗：電郵或密碼錯誤 / Invalid login credentials";
       if (msg.includes("Password should be")) msg = "密碼太短 / Password too short";
+      if (msg.includes("Failed to fetch") || msg.includes("fetch failed") || msg.includes("NetworkError")) {
+        msg = "無法連線到驗證服務。請檢查 Supabase URL / API Key 及網絡連線。 / Unable to reach auth service.";
+      }
       setError(msg || "發生錯誤 / An error occurred");
     } finally {
       setLoading(false);
