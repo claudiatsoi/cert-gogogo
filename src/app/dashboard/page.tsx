@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Database } from "@/types/database";
+import { FIRST_COMPETITION, getFirstCompetitionPhase, isKindergartenGrade } from "@/lib/competition";
 
 type Competition = Database["public"]["Tables"]["competitions"]["Row"];
 type Submission = Database["public"]["Tables"]["submissions"]["Row"];
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [profileGrade, setProfileGrade] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -26,6 +28,16 @@ export default function Dashboard() {
           return;
         }
         setUser(user);
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("school_grade")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        setProfileGrade(profile?.school_grade ?? null);
 
         // Fetch user's latest submission
         const { data: submissions, error: submissionError } = await supabase
@@ -73,6 +85,37 @@ export default function Dashboard() {
     alert("正在轉向付款頁面... / Redirecting to Stripe Checkout...");
   };
 
+  const competitionPhase = getFirstCompetitionPhase();
+  const kindergartenEligible = isKindergartenGrade(profileGrade);
+
+  if (!loading && user && !kindergartenEligible) {
+    return (
+      <div className="container mx-auto max-w-3xl py-16 px-4">
+        <Card className="border-secondary/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-2xl">首場比賽只限幼稚園學生 / Kindergarten Only</CardTitle>
+            <CardDescription>
+              {FIRST_COMPETITION.title} is restricted to kindergarten students after login.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              您目前的年級資料未顯示為幼稚園，暫時未能進入比賽。 / Your profile is not marked as kindergarten, so competition access is currently disabled.
+            </p>
+            <div className="rounded-2xl border border-border bg-muted/30 p-4 text-foreground">
+              <p className="font-semibold mb-2">比賽時間 / Competition Window</p>
+              <p>申請開始 / Application opens: {FIRST_COMPETITION.applicationStartLabel}</p>
+              <p>比賽期間 / Competition period: {FIRST_COMPETITION.competitionStartLabel} - {FIRST_COMPETITION.competitionEndLabel}</p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full" onClick={() => router.push("/register")}>返回註冊 / Back to Register</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return <div className="flex h-screen items-center justify-center">載入中... / Loading...</div>;
   }
@@ -80,6 +123,24 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto py-10 px-4">
       <h1 className="text-3xl font-bold mb-8">學生儀表板 / Student Dashboard</h1>
+
+      <Card className="mb-6 border-dashed border-secondary/40 bg-secondary/5">
+        <CardHeader>
+          <CardTitle>{FIRST_COMPETITION.title}</CardTitle>
+          <CardDescription>
+            Applications open from {FIRST_COMPETITION.applicationStartLabel}. Competition runs from {FIRST_COMPETITION.competitionStartLabel} to {FIRST_COMPETITION.competitionEndLabel}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          <p>Only kindergarten students can join after login.</p>
+          <p>
+            Current status: {competitionPhase === "upcoming" && "Coming soon"}
+            {competitionPhase === "application" && "Application open"}
+            {competitionPhase === "live" && "Competition live"}
+            {competitionPhase === "closed" && "Competition closed"}
+          </p>
+        </CardContent>
+      </Card>
 
       {submission ? (
         <div className="space-y-6">
@@ -132,10 +193,16 @@ export default function Dashboard() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <div className="col-span-full mb-4">
                 <h2 className="text-2xl font-semibold">進行中的比賽 / Available Competitions</h2>
-                <p className="text-muted-foreground">請選擇一個比賽開始 / Select a competition to start.</p>
+                <p className="text-muted-foreground">
+                  {competitionPhase === "live"
+                    ? "請選擇一個比賽開始 / Select a competition to start."
+                    : "比賽尚未開始，請先完成幼稚園學生註冊並等待開賽。 / The competition is not live yet. Please wait for the start date."}
+                </p>
             </div>
           
-          {competitions.length === 0 ? (
+          {competitionPhase !== "live" ? (
+            <p className="text-muted-foreground col-span-full">{FIRST_COMPETITION.applicationStartLabel} 開始接受申請，{FIRST_COMPETITION.competitionStartLabel} 才可開始比賽。 / Applications open on {FIRST_COMPETITION.applicationStartLabel}, and competition starts on {FIRST_COMPETITION.competitionStartLabel}.</p>
+          ) : competitions.length === 0 ? (
               <p className="text-muted-foreground col-span-full">暫時沒有進行中的比賽 / No active competitions at the moment.</p>
           ) : (
               competitions.map((comp) => (
@@ -153,6 +220,7 @@ export default function Dashboard() {
                     <Button 
                         className="w-full" 
                         onClick={() => router.push(`/compete/${comp.id}`)}
+                        disabled={competitionPhase !== "live"}
                     >
                       開始比賽 / Start Competition
                     </Button>

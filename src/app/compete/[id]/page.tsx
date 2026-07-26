@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Database } from "@/types/database";
+import { FIRST_COMPETITION, getFirstCompetitionPhase, isKindergartenGrade } from "@/lib/competition";
 
 type Question = Database["public"]["Tables"]["questions"]["Row"];
 
@@ -20,6 +21,7 @@ export default function CompetitionPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [cheatWarning, setCheatWarning] = useState(false);
+  const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const cheatCount = useRef(0);
 
   // Anti-Cheat: Visibility Change
@@ -39,6 +41,42 @@ export default function CompetitionPage() {
   useEffect(() => {
     const fetchQuestions = async () => {
       if (!id) return;
+
+      const competitionPhase = getFirstCompetitionPhase();
+      if (competitionPhase !== "live") {
+        setAccessMessage(
+          `此比賽暫未開始。/ This competition is not live yet. Application opens on ${FIRST_COMPETITION.applicationStartLabel}, and the competition runs from ${FIRST_COMPETITION.competitionStartLabel} to ${FIRST_COMPETITION.competitionEndLabel}.`,
+        );
+        setLoading(false);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setAccessMessage("請先登入才能參加比賽。/ Please log in before joining the competition.");
+        setLoading(false);
+        router.push("/register");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("school_grade")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Failed to load profile:", profileError);
+        setAccessMessage("未能驗證學生資料。/ Unable to verify student profile.");
+        setLoading(false);
+        return;
+      }
+
+      if (!isKindergartenGrade(profile?.school_grade)) {
+        setAccessMessage("首場比賽只限幼稚園學生。/ This competition is for kindergarten students only.");
+        setLoading(false);
+        return;
+      }
       
       try {
         const { data, error } = await supabase
@@ -55,7 +93,7 @@ export default function CompetitionPage() {
       }
     };
     fetchQuestions();
-  }, [id]);
+  }, [id, router]);
 
   const currentQuestion = questions[currentIndex];
 
@@ -99,6 +137,11 @@ export default function CompetitionPage() {
              return;
         }
 
+        if (getFirstCompetitionPhase() !== "live") {
+          alert("首場比賽尚未開放。/ The competition is not live yet.");
+          return;
+        }
+
         const percentageScore = Math.round((finalScoreCount / questions.length) * 100);
         
         let tier = "Participation";
@@ -139,6 +182,23 @@ export default function CompetitionPage() {
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center">載入比賽中... / Loading Competition...</div>;
+  if (accessMessage) {
+    return (
+      <div className="container mx-auto max-w-2xl py-16 px-4">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-2xl">比賽未開放 / Competition Unavailable</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-muted-foreground leading-relaxed">
+            <p>{accessMessage}</p>
+            <p>
+              {FIRST_COMPETITION.title} · {FIRST_COMPETITION.applicationStartLabel} / {FIRST_COMPETITION.competitionStartLabel} - {FIRST_COMPETITION.competitionEndLabel}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   if (!currentQuestion) return <div className="flex h-screen items-center justify-center">未能找到問題。/ No questions found.</div>;
 
   const progress = ((currentIndex + 1) / questions.length) * 100;

@@ -28,6 +28,25 @@ const SCHOOL_CATEGORIES = [
   "Other",
 ];
 
+const STUDENT_GRADES = [
+  { value: "Kindergarten", label: "幼稚園 / Kindergarten" },
+  { value: "K1", label: "K1" },
+  { value: "K2", label: "K2" },
+  { value: "K3", label: "K3" },
+  { value: "P1", label: "小1 / Primary 1" },
+  { value: "P2", label: "小2 / Primary 2" },
+  { value: "P3", label: "小3 / Primary 3" },
+  { value: "P4", label: "小4 / Primary 4" },
+  { value: "P5", label: "小5 / Primary 5" },
+  { value: "P6", label: "小6 / Primary 6" },
+  { value: "S1", label: "中1 / Secondary 1" },
+  { value: "S2", label: "中2 / Secondary 2" },
+  { value: "S3", label: "中3 / Secondary 3" },
+  { value: "S4", label: "中4 / Secondary 4" },
+  { value: "S5", label: "中5 / Secondary 5" },
+  { value: "S6", label: "中6 / Secondary 6" },
+];
+
 export default function RegisterOrLoginPage() {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -298,6 +317,9 @@ export default function RegisterOrLoginPage() {
                       <label htmlFor="grade" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         年級 / Grade
                       </label>
+                      <p className="text-xs text-muted-foreground">
+                        首場比賽只限幼稚園學生參加。/ The first competition is for kindergarten students only.
+                      </p>
                       <select
                         id="grade"
                         name="grade"
@@ -307,11 +329,8 @@ export default function RegisterOrLoginPage() {
                         required
                       >
                         <option value="" disabled>選擇年級 / Select Grade</option>
-                        {[1, 2, 3, 4, 5, 6].map((g) => (
-                          <option key={`P${g}`} value={`P${g}`}>小{g} / Primary {g}</option>
-                        ))}
-                        {[1, 2, 3, 4, 5, 6].map((g) => (
-                          <option key={`S${g}`} value={`S${g}`}>中{g} / Secondary {g}</option>
+                        {STUDENT_GRADES.map((gradeOption) => (
+                          <option key={gradeOption.value} value={gradeOption.value}>{gradeOption.label}</option>
                         ))}
                       </select>
                     </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { FIRST_COMPETITION } from "@/lib/competition";
 
 export default function Home() {
   return (
@@ -28,6 +29,74 @@ export default function Home() {
               了解更多 / Learn More
             </Button>
           </Link>
+        </div>
+      </section>
+
+      <section className="py-16 px-4 bg-gradient-to-b from-background via-muted/20 to-background">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-stretch">
+            <div className="rounded-3xl border border-border bg-slate-950 text-white p-8 sm:p-10 shadow-2xl overflow-hidden relative">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.12),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(252,211,77,0.18),_transparent_30%)]" />
+              <div className="relative space-y-6">
+                <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm font-semibold tracking-wide">
+                  首場比賽通知 / First Competition Notice
+                </div>
+                <div>
+                  <p className="text-sm uppercase tracking-[0.3em] text-secondary/90 mb-3">{FIRST_COMPETITION.title}</p>
+                  <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
+                    幼稚園專屬比賽已準備就緒，敬請留意報名與比賽日期。
+                  </h2>
+                </div>
+                <p className="text-white/80 text-base sm:text-lg leading-relaxed max-w-2xl">
+                  The first competition poster is now featured on the website. Applications open from {FIRST_COMPETITION.applicationStartLabel}, and the competition period runs from {FIRST_COMPETITION.competitionStartLabel} to {FIRST_COMPETITION.competitionEndLabel}.
+                </p>
+                <div className="flex flex-wrap gap-3 text-sm font-semibold">
+                  <span className="rounded-full bg-white/10 px-4 py-2">報名開始 / Application: {FIRST_COMPETITION.applicationStartLabel}</span>
+                  <span className="rounded-full bg-white/10 px-4 py-2">比賽開始 / Start: {FIRST_COMPETITION.competitionStartLabel}</span>
+                  <span className="rounded-full bg-white/10 px-4 py-2">比賽結束 / End: {FIRST_COMPETITION.competitionEndLabel}</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3 pt-2 text-sm text-white/80">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="font-semibold text-white mb-1">只限幼稚園學生</p>
+                    <p>Only kindergarten students can join after login.</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="font-semibold text-white mb-1">登入後驗證</p>
+                    <p>Eligibility is checked after student login.</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="font-semibold text-white mb-1">適合首場推廣</p>
+                    <p>Use this notice as the first poster placement on the site.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-border bg-white p-8 sm:p-10 shadow-xl flex flex-col justify-between gap-6">
+              <div>
+                <p className="text-sm font-semibold text-primary uppercase tracking-[0.25em] mb-3">Poster Preview</p>
+                <h3 className="text-2xl font-bold text-primary mb-4">{FIRST_COMPETITION.title}</h3>
+                <div className="rounded-2xl border-2 border-dashed border-secondary/40 bg-secondary/5 p-6 space-y-4">
+                  <p className="text-xl font-bold text-foreground">15 Aug 2026: Application opens</p>
+                  <p className="text-lg text-muted-foreground">1 Sep 2026 - 5 Oct 2026: Competition period</p>
+                  <p className="text-base text-foreground">
+                    Kindergarten students only. Please register with the student grade so the system can unlock the competition after login.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/register">
+                  <Button size="lg" className="bg-primary text-white hover:bg-primary/90 font-semibold">
+                    前往註冊 / Register Now
+                  </Button>
+                </Link>
+                <Link href="/dashboard">
+                  <Button size="lg" variant="outline" className="font-semibold">
+                    登入後查看 / View After Login
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
