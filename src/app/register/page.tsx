@@ -38,7 +38,6 @@ export default function RegisterOrLoginPage() {
     teacherPhone: "",
     schoolCategory: "",
     schoolName: "",
-    teacherAccessCode: "",
     password: "",
   });
   const [accountType, setAccountType] = useState<AccountType>("student");
@@ -76,7 +75,6 @@ export default function RegisterOrLoginPage() {
       teacherPhone,
       schoolCategory,
       schoolName,
-      teacherAccessCode,
     } = formData;
 
     try {
@@ -112,29 +110,6 @@ export default function RegisterOrLoginPage() {
         if (isTeacher) {
           if (!teacherPhone.trim()) {
             throw new Error("請填寫教師電話 / Teacher phone number is required");
-          }
-
-          let verifyResponse: Response;
-          try {
-            verifyResponse = await fetch("/api/teacher/verify-access", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ code: teacherAccessCode.trim() }),
-            });
-          } catch {
-            throw new Error("無法驗證教師代碼，請稍後再試。/ Unable to verify teacher code right now.");
-          }
-
-          const verifyData = await verifyResponse
-            .json()
-            .catch(() => ({ ok: false, error: "Teacher access verification failed." }));
-          if (!verifyResponse.ok || !verifyData?.ok) {
-            if (verifyResponse.status === 500) {
-              throw new Error("教師驗證服務未設定。請設定 TEACHER_ACCESS_CODE 環境變數。 / Teacher verification is not configured.");
-            }
-            throw new Error("教師專用代碼錯誤 / Invalid teacher access code");
           }
         }
 
@@ -277,7 +252,7 @@ export default function RegisterOrLoginPage() {
                     onChange={(e) => setAccountType(e.target.value as AccountType)}
                     required
                   >
-                    <option value="student">學生 / Student</option>
+                    <option value="student">家長/學生 / Parent/ Student</option>
                     <option value="teacher">教師 / Teacher</option>
                   </select>
                 </div>
@@ -396,17 +371,6 @@ export default function RegisterOrLoginPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="teacherAccessCode" className="text-sm font-medium leading-none">教師專用代碼 / Teacher Access Code</label>
-                      <Input
-                        id="teacherAccessCode"
-                        name="teacherAccessCode"
-                        placeholder="輸入教師專用代碼 / Enter teacher access code"
-                        value={formData.teacherAccessCode}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
                   </>
                 )}
               </>
