@@ -35,7 +35,7 @@ export default function Home() {
       <section className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-primary mb-4">為什麼選擇 Go-Go-Go? / Why Go-Go-Go?</h2>
+            <h2 className="text-3xl font-bold text-primary mb-4">為什麼選擇粵一創科文化協會？ / Why Cant One Creative Innovation &amp; Culture Association?</h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               我們為全港學生提供一個公平、有趣及有獎勵的學習平台。<br/>
               We provide a fair, engaging, and rewarding platform for students across Hong Kong.

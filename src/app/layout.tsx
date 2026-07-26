@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Go-Go-Go 比賽平台 | Competition Platform",
+  title: "粵一創科文化協會 | Cant One Creative Innovation & Culture Association",
   description: "為香港學生打造的網上比賽平台 / Low-budget online competition platform for students in Hong Kong",
 };
 

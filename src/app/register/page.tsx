@@ -15,18 +15,39 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 
+type AccountType = "student" | "teacher";
+
+const TEACHER_TITLES = ["Mr", "Ms", "Mrs", "Dr", "Prof", "Principal", "Teacher"];
+const SCHOOL_CATEGORIES = [
+  "Kindergarten",
+  "Primary School",
+  "Secondary School",
+  "International School",
+  "Special Education",
+  "Tutorial Center",
+  "Other",
+];
+
 export default function RegisterOrLoginPage() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
     grade: "",
+    title: "",
+    teacherPhone: "",
+    schoolCategory: "",
+    schoolName: "",
+    teacherAccessCode: "",
     password: "",
   });
+  const [accountType, setAccountType] = useState<AccountType>("student");
   const [isLogin, setIsLogin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const isTeacher = accountType === "teacher";
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -38,27 +59,84 @@ export default function RegisterOrLoginPage() {
     setLoading(true);
     setError(null);
 
-    const { email, password, fullName, phone, grade } = formData;
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      grade,
+      title,
+      teacherPhone,
+      schoolCategory,
+      schoolName,
+      teacherAccessCode,
+    } = formData;
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) throw error;
+
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user.id)
+            .maybeSingle();
+
+          if (profile?.role === "teacher" || profile?.role === "admin") {
+            router.push("/teacher");
+            return;
+          }
+        }
+
         router.push("/dashboard");
       } else {
+        if (isTeacher) {
+          if (!teacherPhone.trim()) {
+            throw new Error("請填寫教師電話 / Teacher phone number is required");
+          }
+
+          let verifyResponse: Response;
+          try {
+            verifyResponse = await fetch("/api/teacher/verify-access", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ code: teacherAccessCode.trim() }),
+            });
+          } catch {
+            throw new Error("無法驗證教師代碼，請稍後再試。/ Unable to verify teacher code right now.");
+          }
+
+          const verifyData = await verifyResponse
+            .json()
+            .catch(() => ({ ok: false, error: "Teacher access verification failed." }));
+          if (!verifyResponse.ok || !verifyData?.ok) {
+            if (verifyResponse.status === 500) {
+              throw new Error("教師驗證服務未設定。請設定 TEACHER_ACCESS_CODE 環境變數。 / Teacher verification is not configured.");
+            }
+            throw new Error("教師專用代碼錯誤 / Invalid teacher access code");
+          }
+        }
+
         // Sign Up
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              full_name: fullName,
-              phone: phone,
-              school_grade: grade,
+              full_name: isTeacher ? title : fullName,
+              phone: isTeacher ? teacherPhone : phone,
+              school_grade: isTeacher ? null : grade,
+              role: isTeacher ? "teacher" : "student",
+              school_category: isTeacher ? schoolCategory : null,
+              school_name: isTeacher ? schoolName : null,
             },
           },
         });
@@ -67,40 +145,62 @@ export default function RegisterOrLoginPage() {
 
         if (authData.user) {
           // Insert into 'profiles' (System Table)
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: authData.user.id,
-                full_name: fullName,
-                phone: phone,
-                school_grade: grade,
-              },
-            ]);
+          const { error: profileError } = await supabase.from("profiles").insert([
+            {
+              id: authData.user.id,
+              full_name: isTeacher ? title : fullName,
+              phone: isTeacher ? teacherPhone : phone,
+              school_grade: isTeacher ? null : grade,
+              role: isTeacher ? "teacher" : "student",
+            },
+          ]);
 
           if (profileError) {
               console.error("Profile creation error:", profileError);
           }
 
-          // Insert into 'Reg info' (User Custom Table)
-          const { error: regError } = await supabase
-            .from('Reg info')
-            .insert([
-              {
-                "Child's Full Name": fullName,
-                "Parent's Email": email, // mapped from email
-                "Parent's Phone number": phone ? Number(phone) : null, // casting to numeric as per schema
-                "Grade": grade,
-                "Password": password, // Warning: Storing plain text password is insecure but follows requested schema
-              },
-            ]);
-            
+          if (isTeacher) {
+            const { error: teacherProfileError } = await supabase
+              .from("teacher_profiles")
+              .upsert([
+                {
+                  id: authData.user.id,
+                  email,
+                  phone: teacherPhone,
+                  title,
+                  school_category: schoolCategory,
+                  school_name: schoolName,
+                },
+              ]);
+
+            if (teacherProfileError) {
+              console.error("Teacher profile insert error:", teacherProfileError);
+              if (teacherProfileError.message.includes("relation") || teacherProfileError.message.includes("teacher_profiles")) {
+                throw new Error("老師資料表未建立。請先在 Supabase 執行 teacher_portal.sql / Teacher table missing. Run teacher_portal.sql first.");
+              }
+              throw new Error(`老師資料儲存失敗 / Failed to save teacher profile: ${teacherProfileError.message}`);
+            }
+          } else {
+            // Insert into 'Reg info' (User Custom Table)
+            const { error: regError } = await supabase
+              .from("Reg info")
+              .insert([
+                {
+                  "Child's Full Name": fullName,
+                  "Parent's Email": email,
+                  "Parent's Phone number": phone ? Number(phone) : null,
+                  "Grade": grade,
+                  "Password": password,
+                },
+              ]);
+
             if (regError) {
               console.error("Reg info insert error (check table columns):", regError);
             }
+          }
         }
 
-        router.push("/dashboard");
+        router.push(isTeacher ? "/teacher" : "/dashboard");
       }
     } catch (err: any) {
       // Basic translation for common errors
@@ -150,61 +250,155 @@ export default function RegisterOrLoginPage() {
             {!isLogin && (
               <>
                 <div className="space-y-2">
-                  <label htmlFor="fullName" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    學生全名 / Child's Full Name
-                  </label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    placeholder="例如: 陳大文 / e.g. Chan Tai Man"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                   <label htmlFor="phone" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    家長電話 / Parent's Phone number
-                  </label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="1234 5678"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                   <label htmlFor="grade" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    年級 / Grade
+                  <label htmlFor="accountType" className="text-sm font-medium leading-none">
+                    帳戶類型 / Account Type
                   </label>
                   <select
-                    id="grade"
-                    name="grade"
+                    id="accountType"
+                    name="accountType"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formData.grade}
-                    onChange={handleInputChange}
+                    value={accountType}
+                    onChange={(e) => setAccountType(e.target.value as AccountType)}
                     required
                   >
-                    <option value="" disabled>選擇年級 / Select Grade</option>
-                    {[1, 2, 3, 4, 5, 6].map((g) => (
-                      <option key={`P${g}`} value={`P${g}`}>小{g} / Primary {g}</option>
-                    ))}
-                    {[1, 2, 3, 4, 5, 6].map((g) => (
-                      <option key={`S${g}`} value={`S${g}`}>中{g} / Secondary {g}</option>
-                    ))}
+                    <option value="student">學生 / Student</option>
+                    <option value="teacher">教師 / Teacher</option>
                   </select>
                 </div>
+
+                {!isTeacher ? (
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="fullName" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        學生全名 / Child's Full Name
+                      </label>
+                      <Input
+                        id="fullName"
+                        name="fullName"
+                        placeholder="例如: 陳大文 / e.g. Chan Tai Man"
+                        value={formData.fullName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="phone" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        家長電話 / Parent's Phone number
+                      </label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        placeholder="1234 5678"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="grade" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        年級 / Grade
+                      </label>
+                      <select
+                        id="grade"
+                        name="grade"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={formData.grade}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="" disabled>選擇年級 / Select Grade</option>
+                        {[1, 2, 3, 4, 5, 6].map((g) => (
+                          <option key={`P${g}`} value={`P${g}`}>小{g} / Primary {g}</option>
+                        ))}
+                        {[1, 2, 3, 4, 5, 6].map((g) => (
+                          <option key={`S${g}`} value={`S${g}`}>中{g} / Secondary {g}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="title" className="text-sm font-medium leading-none">稱謂 / Title</label>
+                      <select
+                        id="title"
+                        name="title"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="" disabled>選擇稱謂 / Select title</option>
+                        {TEACHER_TITLES.map((item) => (
+                          <option key={item} value={item}>{item}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="teacherPhone" className="text-sm font-medium leading-none">電話 / Tel No.</label>
+                      <Input
+                        id="teacherPhone"
+                        name="teacherPhone"
+                        type="tel"
+                        placeholder="例如: 9123 4567"
+                        value={formData.teacherPhone}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="schoolCategory" className="text-sm font-medium leading-none">學校類別 / School Category</label>
+                      <select
+                        id="schoolCategory"
+                        name="schoolCategory"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        value={formData.schoolCategory}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="" disabled>選擇學校類別 / Select school category</option>
+                        {SCHOOL_CATEGORIES.map((item) => (
+                          <option key={item} value={item}>{item}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="schoolName" className="text-sm font-medium leading-none">學校名稱 / School Name</label>
+                      <Input
+                        id="schoolName"
+                        name="schoolName"
+                        placeholder="例如: ABC Primary School"
+                        value={formData.schoolName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="teacherAccessCode" className="text-sm font-medium leading-none">教師專用代碼 / Teacher Access Code</label>
+                      <Input
+                        id="teacherAccessCode"
+                        name="teacherAccessCode"
+                        placeholder="輸入教師專用代碼 / Enter teacher access code"
+                        value={formData.teacherAccessCode}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
 
             <div className="space-y-2">
                <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                家長電郵 / Parent's Email
+                {isTeacher && !isLogin ? "教師電郵 / Teacher Email" : "家長電郵 / Parent's Email"}
               </label>
               <Input
                 id="email"

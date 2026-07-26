@@ -7,6 +7,7 @@ export interface Database {
           full_name: string | null
           phone: string | null
           school_grade: string | null
+          role: 'student' | 'teacher' | 'admin'
           created_at: string
         }
         Insert: {
@@ -14,6 +15,7 @@ export interface Database {
           full_name?: string | null
           phone?: string | null
           school_grade?: string | null
+          role?: 'student' | 'teacher' | 'admin'
           created_at?: string
         }
         Update: {
@@ -21,7 +23,75 @@ export interface Database {
           full_name?: string | null
           phone?: string | null
           school_grade?: string | null
+          role?: 'student' | 'teacher' | 'admin'
           created_at?: string
+        }
+      }
+      teacher_students: {
+        Row: {
+          id: string
+          teacher_id: string
+          student_name: string
+          student_email: string
+          grade: string | null
+          parent_email: string | null
+          magic_link_sent_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          teacher_id: string
+          student_name: string
+          student_email: string
+          grade?: string | null
+          parent_email?: string | null
+          magic_link_sent_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          teacher_id?: string
+          student_name?: string
+          student_email?: string
+          grade?: string | null
+          parent_email?: string | null
+          magic_link_sent_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      teacher_profiles: {
+        Row: {
+          id: string
+          email: string
+          phone: string | null
+          title: string
+          school_category: string
+          school_name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          phone?: string | null
+          title: string
+          school_category: string
+          school_name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          phone?: string | null
+          title?: string
+          school_category?: string
+          school_name?: string
+          created_at?: string
+          updated_at?: string
         }
       }
       competitions: {

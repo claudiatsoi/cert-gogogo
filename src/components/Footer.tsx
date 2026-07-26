@@ -8,7 +8,10 @@ export function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
-            <h3 className="text-xl font-bold mb-4 text-secondary">Go-Go-Go</h3>
+            <h3 className="text-xl font-bold mb-4 text-secondary leading-tight">
+              <span className="block">粵一創科文化協會</span>
+              <span className="block text-sm text-secondary/90">Cant One Creative Innovation &amp; Culture Association</span>
+            </h3>
             <p className="text-primary-foreground/80 max-w-xs">
               激發香港學生的學術卓越與競爭精神。<br/>
               Fueling academic excellence and competitive spirit in Hong Kong students.
@@ -43,7 +46,7 @@ export function Footer() {
         </div>
         
         <div className="border-t border-primary-foreground/20 pt-8 text-center text-sm text-primary-foreground/60">
-          &copy; {currentYear} Go-Go-Go Competition Platform. All rights reserved.
+          &copy; {currentYear} 粵一創科文化協會 | Cant One Creative Innovation &amp; Culture Association. All rights reserved.
         </div>
       </div>
     </footer>
